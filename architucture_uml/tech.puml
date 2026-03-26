@@ -1,0 +1,47 @@
+@startuml TENDERLEDGER-CONTAINER
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container View - Tenderledger Platform
+
+Person(bidder, "Bidder", "Organization or individual submitting bids")
+Person(tender_owner, "Tender Owner", "Organization creating and managing tenders")
+Person(auditor, "Auditor", "Reviews activities, exports reports, verifies compliance")
+Person(admin, "Platform Admin", "Manages users, roles, platform configuration")
+
+System_Boundary(tenderledger, "Tenderledger Platform") {
+    Container(web_app, "Web Application", "Next.js", "Single-page application for all user interactions")
+    Container(api_gateway, "API Gateway", "NestJS", "REST API for tender/bid/audit management")
+    Container(indexer_service, "Event Indexer", "NestJS Worker", "Indexes Hedera events to PostgreSQL")
+    Container(contract_listener, "Contract Listener", "Node.js", "Listens to contract events via Mirror Node")
+    Container(audit_service, "Audit Service", "NestJS", "Tracks all platform activities for compliance")
+    
+    ContainerDb(database, "PostgreSQL", "Primary database for application data")
+    ContainerDb(cache, "Redis", "Caching layer for API responses")
+}
+
+System_Ext(hedera, "Hedera Network", "Smart contract execution, HBAR transfers")
+System_Ext(mirror_node, "Hedera Mirror Node", "Event indexing, transaction history")
+System_Ext(ipfs, "IPFS (Pinata)", "Document storage")
+System_Ext(wallet, "Web3 Wallet", "Transaction signing")
+
+Rel(web_app, api_gateway, "HTTPS/REST", "axios/fetch")
+Rel(web_app, wallet, "WalletConnect Protocol", "web3modal")
+Rel(api_gateway, database, "SQL", "Prisma ORM")
+Rel(api_gateway, cache, "Redis Protocol", "ioredis")
+Rel(audit_service, database, "JDBC", "Prisma")
+Rel(indexer_service, mirror_node, "WebSocket/REST", "hedera-sdk")
+Rel(indexer_service, database, "JDBC", "Prisma")
+Rel(contract_listener, mirror_node, "WebSocket", "hedera-sdk")
+Rel(contract_listener, database, "Events", "Prisma")
+
+Rel(api_gateway, hedera, "Contract Calls", "JSON-RPC/Hedera SDK")
+Rel(web_app, ipfs, "Upload/Download", "axios")
+
+' Auditor access
+Rel(auditor, web_app, "Views audit logs, exports reports")
+Rel(auditor, api_gateway, "API access for audit queries")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,42 @@
+@startuml SECURITY
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Security Architecture - Tenderledger
+
+Person(bidder, "Bidder", "Has HMAC-signed requests")
+Person(tender_owner, "Tender Owner", "Owner of tender contracts")
+Person(hacker, "Attacker", "Attempting unauthorized access")
+
+System_Boundary(sec, "Security Layer") {
+    System(waf, "WAF", "Blocks SQL injection, XSS, DDoS")
+    System(auth, "Auth Service", "JWT validation, rate limiting")
+    System(rate_limiter, "Rate Limiter", "Prevents abuse")
+}
+
+System(tenderledger, "Tenderledger API")
+System(contracts, "Smart Contracts")
+
+Rel(bidder, waf, "HTTP/S")
+Rel(tender_owner, waf, "HTTP/S")
+Rel(hacker, waf, "Malicious requests")
+Rel(waf, auth, "Validated requests")
+Rel(waf, rate_limiter, "Check limits")
+Rel(rate_limiter, tenderledger, "Allowed requests")
+Rel(auth, tenderledger, "Authenticated")
+Rel(tenderledger, contracts, "Contract calls")
+
+note as security_notes
+Security Measures:
+• All transactions signed by user's wallet (ECDSA)
+• API protected by JWT + CORS
+• Smart contracts immutable (no admin backdoor)
+• Rate limiting: 100 req/min per IP
+• Input validation: class-validator (NestJS)
+• SQL injection: Prisma parameterized queries
+• XSS: React's built-in escaping
+end note
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,42 @@
+@startuml CREATE-TENDER-FLOW
+participant "User (Owner)" as user
+participant "Web App" as web
+participant "API Gateway" as api
+participant "TenderFactory" as factory
+participant "IPFS" as ipfs
+participant "Database" as db
+participant "Hedera" as hedera
+
+user -> web: Click "Create Tender"
+web -> web: Open create form
+
+user -> web: Fill form (title, desc, deadline, minBid)
+user -> web: Upload documents (optional)
+web -> ipfs: Upload documents
+ipfs --> web: Return IPFS CIDs
+
+user -> web: Submit tender
+web -> api: POST /tenders { title, desc, deadline, minBid, docCids }
+
+api -> api: Validate input
+api -> db: Create tender record (status: PENDING)
+db --> api: Tender created
+
+api -> factory: createTender(title, desc, deadline, minBid)\n{value: deployment fee}
+activate factory
+
+factory -> factory: Deploy TenderInstance
+factory -> hedera: Submit contract deploy transaction
+hedera --> factory: Contract deployed
+
+factory --> api: Return TenderInstance address
+deactivate factory
+
+api -> db: Update tender with contract address
+db --> api: Tender updated
+
+api --> web: 201 Created { tenderId, contractAddress }
+web --> user: Redirect to tender detail page
+
+note over user, hedera: ~3-5 seconds to finality on Hedera
+@enduml

@@ -1,0 +1,32 @@
+@startuml TENDERLEDGER-CONTEXT
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context - Tenderledger Platform
+
+Person(bidder, "Bidder", "Organization or individual submitting bids for tenders")
+Person(tender_owner, "Tender Owner", "Organization creating and managing tenders")
+Person(auditor, "Auditor", "Reviews tender activities, verifies compliance, monitors for fraud")
+Person(admin, "Platform Admin", "Manages platform configuration, user roles, system settings")
+
+System(tenderledger, "Tenderledger", "Decentralized tendering platform on Hedera network.")
+
+System_Ext(hedera, "Hedera Network", "Distributed ledger for smart contracts and token transfers")
+System_Ext(mirror_node, "Hedera Mirror Node", "Provides indexed blockchain data and event logs")
+System_Ext(ipfs, "IPFS (Pinata)", "Decentralized storage for tender documents")
+System_Ext(wallet, "Web3 Wallet", "WalletConnect for HBAR custody")
+
+Rel(bidder, tenderledger, "Submits bids, views tenders, withdraws refunds")
+Rel(tender_owner, tenderledger, "Creates tenders, uploads documents, closes tenders")
+Rel(auditor, tenderledger, "Reviews audit logs, views tender history, exports reports")
+Rel(admin, tenderledger, "Configures platform, manages users, system settings")
+
+Rel(tenderledger, hedera, "Deploys contracts, executes transactions")
+Rel(tenderledger, mirror_node, "Queries events, indexes bid history")
+Rel(tenderledger, ipfs, "Uploads/downloads tender documents")
+Rel(bidder, wallet, "Signs transactions, holds HBAR")
+Rel(tender_owner, wallet, "Signs transactions, holds HBAR")
+Rel(auditor, wallet, "Signs in, views audit data")
+@enduml
+

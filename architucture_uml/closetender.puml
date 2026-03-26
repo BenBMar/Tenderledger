@@ -1,0 +1,56 @@
+@startuml CLOSE-WITHDRAW-FLOW
+participant "User (Owner)" as owner
+participant "Web App" as web
+participant "API Gateway" as api
+participant "TenderInstance" as contract
+participant "Mirror Node" as mirror
+participant "Indexer" as indexer
+participant "Database" as db
+
+== Closing Tender ==
+
+alt Deadline Passed
+    owner -> web: Click "Close Tender"
+    web -> api: POST /tenders/{id}/close
+    api -> contract: closeTender()
+    activate contract
+    
+    contract -> contract: Validate deadline passed
+    contract -> contract: Validate caller == owner
+    contract -> contract: Transfer highestBid to owner
+    contract -> contract: Set status = CLOSED
+    
+    contract --> api: Success
+    deactivate contract
+    
+    api -> db: Update tender status
+    mirror -> indexer: TenderClosed event
+    indexer -> db: Update tender
+end
+
+== Withdrawing Refund ==
+
+participant "User (Non-Winner Bidder)" as bidder
+participant "Web App" as web2
+participant "API Gateway" as api2
+participant "TenderInstance" as contract2
+
+bidder -> web2: Click "Withdraw Refund"
+web2 -> api2: POST /tenders/{id}/withdraw
+api2 -> contract2: withdrawRefund()
+activate contract2
+
+contract2 -> contract2: Validate tender is CLOSED
+contract2 -> contract2: Validate bidder != highestBidder
+contract2 -> contract2: Get bids[bidder] amount
+contract2 -> contract2: Transfer to bidder
+contract2 -> contract2: Set bids[bidder] = 0
+
+contract2 --> api2: Refund transferred
+deactivate contract2
+
+api2 -> db: Mark refund claimed
+db --> api2: Updated
+
+web2 --> bidder: Show success, update balance
+@enduml

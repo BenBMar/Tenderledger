@@ -1,0 +1,40 @@
+@startuml PLACE-BID-FLOW
+participant "User (Bidder)" as user
+participant "Web App" as web
+participant "API Gateway" as api
+participant "TenderInstance" as contract
+participant "Mirror Node" as mirror
+participant "Indexer" as indexer
+participant "Database" as db
+
+user -> web: Select tender, enter bid amount
+user -> web: Click "Place Bid"
+
+web -> web: Validate bid >= minBid
+
+web -> web: Open wallet for signing
+user -> user: Approve in wallet
+web -> contract: placeBid{value: bidAmount}()
+activate contract
+
+contract -> contract: Validate tender is open
+contract -> contract: Validate bid > highestBid
+contract -> contract: Validate bid >= minBid
+contract -> contract: Refund previous high bidder
+
+contract -> contract: Update highestBid, highestBidder
+contract -> contract: Increment bidCount
+contract -> contract: Update bids[bidder] balance
+
+contract --> web: Transaction success
+deactivate contract
+
+note over mirror: Mirror node indexes event within seconds
+mirror -> indexer: New BidPlaced event
+indexer -> db: Insert bid record
+db --> indexer: Bid saved
+
+web --> user: Show success, update UI
+user -> web: View updated highest bid
+
+@enduml

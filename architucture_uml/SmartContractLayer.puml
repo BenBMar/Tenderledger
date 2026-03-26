@@ -1,0 +1,36 @@
+@startuml SmartContractLayer
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component Diagram: TenderLedger Smart Contract Layer (HSCS + HTS + HCS)
+
+Container_Boundary(hscs, "Hedera Smart Contract Service (EVM)") {
+    
+    Component(identity_reg, "IdentityManager", "Solidity", "Verifies HTS 'VerifiedBidder' NFT ownership via HTS System Contract.")
+    
+    Component(tender_factory, "TenderFactory", "Solidity", "Deploys and tracks individual Tender instances; manages Admin access.")
+    
+    Component(tender_logic, "TenderContract", "Solidity", "State machine: stores TopicID, IPFS hashes, and Commitments. Enforces deadlines.")
+    
+    Component(escrow, "EscrowVault", "Solidity", "Holds HBAR/HTS deposits. Manages automated refunds and winner disbursements.")
+    
+    Component(award_svc, "WinnerRegistry", "Solidity", "Triggers HTS 'Winner NFT' minting upon finalization.")
+}
+
+System_Ext(hts, "Hedera Token Service", "Native NFTs")
+System_Ext(hcs, "Hedera Consensus Service", "Immutable Audit Topics")
+System_Ext(ipfs, "IPFS", "Encrypted Technical Documents")
+System_Ext(mirror, "Mirror Node API", "Public Audit Trail Access")
+
+' Relationships
+Rel(identity_reg, hts, "Check NFT Balance", "gRPC/Precompile")
+Rel(tender_factory, tender_logic, "Deploys")
+Rel(tender_logic, identity_reg, "Gate: submitBid()")
+Rel(tender_logic, hcs, "Log: TenderCreated, BidSubmitted", "ConsensusSubmitMessage")
+Rel(tender_logic, escrow, "Lock/Release Funds")
+Rel(tender_logic, award_svc, "Trigger Award")
+Rel(award_svc, hts, "Mint Winner NFT", "TokenMint")
+Rel(mirror, hcs, "Query Logs", "REST API")
+
+@enduml

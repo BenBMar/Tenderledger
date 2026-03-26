@@ -1,0 +1,42 @@
+@startuml SequenceDiagramHSCS
+actor Admin as "Admin (Gov)"
+participant UI as "Next.js UI"
+participant HSCS as "TenderContract"
+participant HCS as "Consensus Service"
+participant HTS as "Token Service"
+actor Vendor as "Vendor (Contractor)"
+participant Mirror as "Mirror Node"
+
+' 1. Identity Verification
+Vendor -> UI: Connect Wallet
+UI -> HTS: Check for 'VerifiedBidder' NFT
+HTS -->> UI: Token Present (Access Granted)
+
+' 2. Tender Creation
+Admin -> UI: createTender(Specs, Deadline)
+UI -> HSCS: createTender(IPFS_Hash, Deadline)
+HSCS -> HCS: ConsensusCreateTopic()
+HCS -->> HSCS: topicId
+HSCS -> HCS: SubmitMessage(IPFS_Hash)
+HSCS -->> UI: Success (Tender Active)
+
+' 3. Bid Submission (Commit Phase)
+Note over Vendor: Commitment = SHA-256(BidValue + Nonce)
+Vendor -> HSCS: submitBid(tenderId, Commitment) + HBAR Deposit
+HSCS -> HCS: SubmitMessage(BidCommitment, Hash_of_Docs)
+HSCS -->> Vendor: Bid Acknowledged
+
+' 4. Finalization (Reveal Phase)
+Note over HSCS: Deadline Reached
+Vendor -> HSCS: revealBid(tenderId, Value, Nonce)
+HSCS -> HSCS: Verify SHA-256(Value + Nonce) == Commitment
+Admin -> HSCS: finalizeTender(tenderId)
+HSCS -> HTS: Mint Winner NFT to Winner
+HSCS -> HSCS: Trigger Automatic Refunds to Losers
+HSCS -> HCS: SubmitMessage(FinalRanking + Results)
+
+' 5. Audit
+actor Auditor as "Public Auditor"
+Auditor -> Mirror: Fetch TopicID Messages
+Mirror -->> Auditor: Complete Immutable Event Log
+@enduml
